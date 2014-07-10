@@ -1,9 +1,12 @@
 
-BINS=web query socket_client query_xml hello
+BINS=simpleWeb web query socket_client query_xml hello
 
 GO=go build
 
 all:	$(BINS)
+
+simpleWeb:	simpleWeb.go
+	$(GO) simpleWeb.go
 
 web:	web.go
 	$(GO) web.go
