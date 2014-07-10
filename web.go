@@ -9,15 +9,22 @@ import (
         //        "reflect"
        )
 
+type Settings struct {
+    debug bool
+    xml bool
+    yaml bool
+    json bool
+}
+
 type Ups struct {
     lineVoltage float64
 }
 
 func ( u Ups) SetLineVolts(value string) {
     v,err := strconv.ParseFloat(value,32)
-        errHndlr(err)
+    errHndlr(err)
 
-        u.lineVoltage = v
+    u.lineVoltage = v
 }
 
 func ( u Ups ) Dump() {
@@ -31,28 +38,64 @@ func errHndlr(err error) {
     }   
 }
 
+func ( u Ups ) FormatOutput() string {
+    var out string
+
+    if s.xml {
+        out = "This will be XML"
+    }
+
+    if s.yaml {
+        out = "This will be YAML"
+    }
+
+    if s.json {
+        out = "This will be JSON"
+    }
+    return out
+}
+
+// Globals
+
 var u Ups
+var s Settings
 
 func handler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Hi there, sent to root %s! and %s", r.URL.Path[1:],r.Method)
+
+        var mimeType string
+
+        if s.xml {
+            mimeType = "text/ups+xml,charset=utf-8"
+        }
+
+        if s.yaml {
+            mimeType = "text/ups+yaml,charset=utf-8"
+        }
+
+        if s.json {
+            mimeType = "text/ups+json,charset=utf-8"
+        }
+
+        w.Header().Set("Content-Type",mimeType)
 
         switch r.Method {
 
             case "GET":
+                fmt.Fprintf(w,"%s\n\n", u.FormatOutput())
                 
             case "POST", "PUT": 
                 fmt.Fprintf(w,"\n\n%s\n\n", r.PostForm)
-                    fmt.Fprintf(w,"\n\n%s\n\n", r.Form)
+                fmt.Fprintf(w,"\n\n%s\n\n", r.Form)
 
-                    r.ParseForm()
+                r.ParseForm()
 
-                    for key, value := range r.Form {
-                        fmt.Fprintf(w,"Key:%s Value:%s\n", key, value)
+                for key, value := range r.Form {
+                    fmt.Fprintf(w,"Key:%s Value:%s\n", key, value)
 
-                            if key == "LINE_VOLTAGE" {
-                                u.SetLineVolts( value[0] )
-                            }
-                    }
+                        if key == "LINE_VOLTAGE" {
+                            u.SetLineVolts( value[0] )
+                        }
+                }
         }
 }
 
@@ -62,9 +105,41 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-    http.HandleFunc("/", handler)
+    debugPtr := flag.Bool("debug",false, "a bool")
+    portPtr  := flag.Int("port",8080,"an int")
+    xmlPtr   := flag.Bool("xml",true, "a bool")
+    yamlPtr   := flag.Bool("yaml",false, "a bool")
+    jsonPtr   := flag.Bool("json",false, "a bool")
 
-        http.HandleFunc("/test", testHandler)
-        http.ListenAndServe(":8080", nil)
+    flag.Parse()
+
+    if *yamlPtr {
+        *xmlPtr=false
+        *jsonPtr=false
+    }
+
+    if *jsonPtr {
+        *xmlPtr=false
+        *yamlPtr=false
+    }
+
+    if *debugPtr {
+        fmt.Println("debug :", *debugPtr)
+        fmt.Println("xml   :", *xmlPtr)
+        fmt.Println("yaml  :", *yamlPtr)
+        fmt.Println("json  :", *jsonPtr)
+        fmt.Println("Port  :", *portPtr)
+    }
+
+    s.xml  = *xmlPtr
+    s.yaml = *yamlPtr
+    s.json = *jsonPtr
+
+    http.HandleFunc("/", handler)
+    http.HandleFunc("/test", testHandler)
+
+    port := fmt.Sprintf(":%d", *portPtr)
+
+    http.ListenAndServe(port, nil)
 }
 
