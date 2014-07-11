@@ -5,7 +5,7 @@ GO=go build
 
 all:	$(BINS)
 
-simpleWeb:	simpleWeb.go
+simpleWeb:	simpleWeb.go ./src/apc_ups/apc_ups.go
 	$(GO) simpleWeb.go
 
 web:	web.go

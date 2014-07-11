@@ -3,12 +3,13 @@ package main
 import (
     "fmt"
     "net/http"
-    //    "os"
+    "os"
     //    "strconv"
     "flag"
     //    "strings"
-    //    "github.com/fzzy/radix/redis"
-    //    "time"
+    "github.com/fzzy/radix/redis"
+    "time"
+    "apc_ups"
     //    "reflect"
 )
 
@@ -18,33 +19,43 @@ const JSON int = 3
 
 var outputType int
 
+func errHandler(err error) {
+    if err != nil {
+        fmt.Println("error:", err)
+        os.Exit(1)
+    }
+}
 func testHandler(w http.ResponseWriter, r *http.Request) {
     fmt.Fprintf(w, "Hi there, Just Testing X%sX\n\n", r.URL.Path[1:])
 }
 
 func upsHandler(w http.ResponseWriter, r *http.Request) {
+    x := ups.Create( "192.168.0.143:4001" )
+
+    fmt.Println("x is ",x)
+    x.UpdateBatteryVoltage()
+    x.UpdateLineVoltage()
+
+
+    c, err := redis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
+    errHandler(err)
+    defer c.Close()
 
     switch outputType {
         case XML:
             fmt.Fprintf(w, "<?xml version=\"1.0\"?>\n")
             fmt.Fprintf(w, "<UPS>\n");
+            fmt.Fprintf(w, "    <BATTERY_VOLTAGE>%s</BATTERY_VOLTAGE>\n", x.GetBatteryVoltage())
+            fmt.Fprintf(w, "    <LINE_VOLTAGE>%s</LINE_VOLTAGE>\n", x.GetLineVoltage())
             fmt.Fprintf(w, "</UPS>\n");
 
         case YAML:
         case JSON:
     }
-    /*
-    fmt.Fprintf(w, "Hi there, Just Handling X%sX\n\n", r.URL.Path[1:])
-    fmt.Fprintf(w, "Output Type is : %d\n\n",outputType)
-
-    fmt.Fprintf(w, "Hi there, Just Handling X%sX\n\n", r.URL.Path[1:])
-    fmt.Fprintf(w, "Output Type is : %d\n\n",outputType)
-    */
 }
 
 
 func main() {
-
     outputType = XML
 
     debugPtr := flag.Bool("debug",false, "a bool")
@@ -67,8 +78,6 @@ func main() {
         outputType = JSON
     }
 
-
-
     port := fmt.Sprintf(":%d",*portPtr)
 
     if *debugPtr {
@@ -76,10 +85,10 @@ func main() {
         fmt.Println("Port  :", *portPtr )
     }
 
-    http.HandleFunc("/ups", upsHandler)
-    http.HandleFunc("/test", testHandler)
 
     //    port := fmt.Sprintf(":%d", *portPtr)
 
+    http.HandleFunc("/ups", upsHandler)
+    http.HandleFunc("/test", testHandler)
     http.ListenAndServe(port, nil)
 }
