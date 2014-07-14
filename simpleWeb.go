@@ -7,15 +7,17 @@ import (
     //    "strconv"
     "flag"
     //    "strings"
-    "github.com/fzzy/radix/redis"
-    "time"
+//    "github.com/fzzy/radix/redis"
+//    "time"
     "apc_ups"
-    //    "reflect"
+    "reflect"
 )
 
 const XML int  = 1
 const YAML int = 2
 const JSON int = 3
+
+var upsInstance *ups.UpsData
 
 var outputType int
 
@@ -30,23 +32,22 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func upsHandler(w http.ResponseWriter, r *http.Request) {
-    x := ups.Create( "192.168.0.143:4001" )
 
-    fmt.Println("x is ",x)
-    x.UpdateBatteryVoltage()
-    x.UpdateLineVoltage()
+    fmt.Println("x is ",upsInstance)
+    upsInstance.UpdateBatteryVoltage()
+    upsInstance.UpdateLineVoltage()
 
 
-    c, err := redis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
-    errHandler(err)
-    defer c.Close()
+//    c, err := redis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
+//    errHandler(err)
+//    defer c.Close()
 
     switch outputType {
         case XML:
             fmt.Fprintf(w, "<?xml version=\"1.0\"?>\n")
             fmt.Fprintf(w, "<UPS>\n");
-            fmt.Fprintf(w, "    <BATTERY_VOLTAGE>%s</BATTERY_VOLTAGE>\n", x.GetBatteryVoltage())
-            fmt.Fprintf(w, "    <LINE_VOLTAGE>%s</LINE_VOLTAGE>\n", x.GetLineVoltage())
+            fmt.Fprintf(w, "    <BATTERY_VOLTAGE>%s</BATTERY_VOLTAGE>\n", upsInstance.GetBatteryVoltage())
+            fmt.Fprintf(w, "    <LINE_VOLTAGE>%s</LINE_VOLTAGE>\n", upsInstance.GetLineVoltage())
             fmt.Fprintf(w, "</UPS>\n");
 
         case YAML:
@@ -56,6 +57,9 @@ func upsHandler(w http.ResponseWriter, r *http.Request) {
 
 
 func main() {
+    upsInstance = ups.Create( "192.168.0.143:4001" )
+    fmt.Println( reflect.TypeOf(upsInstance) )
+
     outputType = XML
 
     debugPtr := flag.Bool("debug",false, "a bool")
