@@ -12,7 +12,9 @@ import (
 type UpsData struct {
     c net.Conn
     batteryVoltage string
+    batteryLevel string
     lineVoltage string
+    runTime string
 }
 
 func (u UpsData) Dump() {
@@ -22,7 +24,40 @@ func (u UpsData) Dump() {
     fmt.Println("Connection: ",u.c)
     fmt.Println("Battery   : ",u.batteryVoltage)
     fmt.Println("Line Volts: ",u.lineVoltage)
+    fmt.Println("Runtime   : ",u.runTime)
     fmt.Println("\t=========")
+}
+
+func (u *UpsData) UpdateBatteryLevel() error {
+    fmt.Fprintf(u.c,"f\n")
+    status, err := bufio.NewReader(u.c).ReadString('\n')
+
+    fmt.Println("runtime is ", status)
+    tmp := strings.TrimSpace(status);
+    data := strings.TrimLeft(strings.TrimRight(tmp,":"),"0")
+    fmt.Println(data)
+
+    bufio.NewReader(u.c).ReadString('\n')
+
+    u.batteryLevel = data
+
+    return err
+}
+
+func (u *UpsData) UpdateRuntime() error {
+    fmt.Fprintf(u.c,"j\n")
+    status, err := bufio.NewReader(u.c).ReadString('\n')
+
+    fmt.Println("runtime is ", status)
+    tmp := strings.TrimSpace(status);
+    data := strings.TrimLeft(strings.TrimRight(tmp,":"),"0")
+    fmt.Println(data)
+
+    bufio.NewReader(u.c).ReadString('\n')
+
+    u.runTime = data
+
+    return err
 }
 
 func (u *UpsData) UpdateBatteryVoltage() error {
@@ -36,6 +71,14 @@ func (u *UpsData) UpdateBatteryVoltage() error {
     u.batteryVoltage = data
 
     return err
+}
+
+func (u *UpsData) GetBatteryLevel() string {
+    return u.batteryLevel
+}
+
+func (u *UpsData) GetRuntime() string {
+    return u.runTime
 }
 
 func (u *UpsData) GetBatteryVoltage() string {

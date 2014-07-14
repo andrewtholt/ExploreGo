@@ -36,6 +36,10 @@ func upsHandler(w http.ResponseWriter, r *http.Request) {
     fmt.Println("x is ",upsInstance)
     upsInstance.UpdateBatteryVoltage()
     upsInstance.UpdateLineVoltage()
+    upsInstance.UpdateRuntime()
+    upsInstance.UpdateBatteryLevel()
+
+    upsInstance.Dump()
 
 
 //    c, err := redis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
@@ -47,7 +51,10 @@ func upsHandler(w http.ResponseWriter, r *http.Request) {
             fmt.Fprintf(w, "<?xml version=\"1.0\"?>\n")
             fmt.Fprintf(w, "<UPS>\n");
             fmt.Fprintf(w, "    <BATTERY_VOLTAGE>%s</BATTERY_VOLTAGE>\n", upsInstance.GetBatteryVoltage())
+            fmt.Fprintf(w, "    <BATTERY_LEVEL>%s</BATTERY_LEVEL>\n", upsInstance.GetBatteryLevel())
+
             fmt.Fprintf(w, "    <LINE_VOLTAGE>%s</LINE_VOLTAGE>\n", upsInstance.GetLineVoltage())
+            fmt.Fprintf(w, "    <RUNTIME>%s</RUNTIME>\n", upsInstance.GetRuntime())
             fmt.Fprintf(w, "</UPS>\n");
 
         case YAML:
@@ -57,6 +64,8 @@ func upsHandler(w http.ResponseWriter, r *http.Request) {
 
 
 func main() {
+    upsInstance = nil
+
     upsInstance = ups.Create( "192.168.0.143:4001" )
     fmt.Println( reflect.TypeOf(upsInstance) )
 
