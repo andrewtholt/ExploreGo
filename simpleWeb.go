@@ -7,8 +7,8 @@ import (
     //    "strconv"
     "flag"
     //    "strings"
-//    "github.com/fzzy/radix/redis"
-//    "time"
+   "github.com/fzzy/radix/redis"
+   "time"
     "apc_ups"
     "reflect"
 )
@@ -32,6 +32,12 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func upsHandler(w http.ResponseWriter, r *http.Request) {
+    c, err := redis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
+    errHandler(err)
+
+    defer c.Close()
+
+    fmt.Println( reflect.TypeOf(c) )
 
     fmt.Println("x is ",upsInstance)
     upsInstance.UpdateBatteryVoltage()
@@ -43,7 +49,6 @@ func upsHandler(w http.ResponseWriter, r *http.Request) {
 
 
 //    c, err := redis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
-//    errHandler(err)
 //    defer c.Close()
 
     switch outputType {
