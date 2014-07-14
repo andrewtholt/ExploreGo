@@ -1,4 +1,6 @@
-
+/*
+    Class constructor/initialiser example.
+*/
 package main
 
 import (
