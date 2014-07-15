@@ -6,7 +6,6 @@ import (
         "bufio"
         "strings"
         "reflect"
-//        "strconv"
         "os"
         "github.com/fzzy/radix/redis"
         "time"
@@ -23,8 +22,6 @@ func main() {
       c, err := redis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
       errHndlr(err)
       defer c.Close()
-
-      fmt.Println( reflect.TypeOf(c) )
 
       host := "192.168.0.143:4001"
       conn, err := net.Dial("tcp", host)
@@ -141,7 +138,6 @@ func getCauseOfTransfer(c net.Conn, red *redis.Client) string {
     status, err := bufio.NewReader(c).ReadString('\n')
     errHndlr(err)
     data := strings.TrimSpace(status);
-//    bufio.NewReader(c).ReadString('\n')
 
     r := red.Cmd("set", "COT", data, "ex","90")
     errHndlr(r.Err)
