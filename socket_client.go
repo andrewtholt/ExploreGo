@@ -9,6 +9,7 @@ import (
         "os"
         "github.com/fzzy/radix/redis"
         "time"
+        "flag"
        )
 
 func errHndlr(err error) {
@@ -19,28 +20,44 @@ func errHndlr(err error) {
 }
 
 func main() {
-      c, err := redis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
-      errHndlr(err)
-      defer c.Close()
 
-      host := "192.168.0.143:4001"
-      conn, err := net.Dial("tcp", host)
+    addressPtr := flag.String("address", "192.168.0.143", "a string")
+    portPtr := flag.Int("port",4001,"an int")
 
-      if err != nil {
-          fmt.Println("33:Network Error")
-          os.Exit(1)
-      } 
+    flag.Parse()
 
-      fmt.Println( reflect.TypeOf(conn) )
-      getLineFrequency(conn,c);
-      getLineVoltage(conn,c);
-      getOutputVoltage(conn,c);
-      getBatteryVoltage(conn,c);
-      getBatteryLevel(conn,c);
-      getCauseOfTransfer(conn,c);
-      getRunTime(conn,c);
 
-      fmt.Println(err)
+    /*
+        Connect to redis
+    */
+    redisHost := "127.0.0.1:6379"
+    c, err := redis.DialTimeout("tcp", redisHost, time.Duration(10)*time.Second)
+    errHndlr(err)
+    defer c.Close()
+
+    /*
+        Connect to serialServer.
+    */
+    host := fmt.Sprintf("%s:%d",*addressPtr,*portPtr)
+    fmt.Println("Connect to ",host)
+
+    conn, err := net.Dial("tcp", host)
+
+    if err != nil {
+        fmt.Println("33:Network Error")
+        os.Exit(1)
+    } 
+
+    fmt.Println( reflect.TypeOf(conn) )
+    getLineFrequency(conn,c);
+    getLineVoltage(conn,c);
+    getOutputVoltage(conn,c);
+    getBatteryVoltage(conn,c);
+    getBatteryLevel(conn,c);
+    getCauseOfTransfer(conn,c);
+    getRunTime(conn,c);
+
+    fmt.Println(err)
 }
 
 func getRunTime(c net.Conn, red *redis.Client) {
