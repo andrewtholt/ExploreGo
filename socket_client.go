@@ -12,15 +12,59 @@ import (
         "flag"
        )
 
-func errHndlr(err error) {
+func errHandler(err error) {
     if err != nil {
         fmt.Println("error:", err)
             os.Exit(1)
     }   
 }
 
-func main() {
+const OK=0
+const POWER_FAIL=1
+const POWER_RETURN=2
 
+
+func myRead(c net.Conn, len int) (string, int) {
+    buf := make([]byte, 16)
+    out := make([]byte, 16)
+    i := 0
+    fail :=0
+
+    limit := len-1
+    n,err := c.Read( buf )
+    errHandler(err)
+
+    switch buf[0] {
+        case '!':
+            return "",POWER_FAIL
+        case '$':
+            return "",POWER_RETURN
+            
+    }
+
+    out[i] = buf[0]
+    i=i+1
+
+    for {
+        n,err = c.Read( buf )
+        errHandler(err)
+
+        if buf[0] != 10 {
+            out[i] = buf[0]
+            i=i+1
+        }
+
+        fmt.Println("Read ",n)
+        fmt.Println( buf )
+        fmt.Println( out )
+
+        if err != nil || i > limit { break }
+    }
+
+    return string(out[:len]), fail
+}
+
+func main() {
     addressPtr := flag.String("address", "192.168.0.143", "a string")
     portPtr := flag.Int("port",4001,"an int")
 
@@ -32,7 +76,7 @@ func main() {
     */
     redisHost := "127.0.0.1:6379"
     c, err := redis.DialTimeout("tcp", redisHost, time.Duration(10)*time.Second)
-    errHndlr(err)
+    errHandler(err)
     defer c.Close()
 
     /*
@@ -49,13 +93,14 @@ func main() {
     } 
 
     fmt.Println( reflect.TypeOf(conn) )
-    getLineFrequency(conn,c);
+
     getLineVoltage(conn,c);
-    getOutputVoltage(conn,c);
-    getBatteryVoltage(conn,c);
-    getBatteryLevel(conn,c);
-    getCauseOfTransfer(conn,c);
-    getRunTime(conn,c);
+//    getLineFrequency(conn,c);
+//    getOutputVoltage(conn,c);
+//    getBatteryVoltage(conn,c);
+//    getBatteryLevel(conn,c);
+//    getCauseOfTransfer(conn,c);
+//    getRunTime(conn,c);
 
     fmt.Println(err)
 }
@@ -63,7 +108,7 @@ func main() {
 func getRunTime(c net.Conn, red *redis.Client) {
     fmt.Fprintf(c,"j\n")
     status, err := bufio.NewReader(c).ReadString('\n')
-    errHndlr(err)
+    errHandler(err)
 
     tmp := strings.TrimSpace(status);
     data := strings.TrimLeft(strings.TrimRight(tmp,":"),"0")
@@ -78,7 +123,7 @@ func getRunTime(c net.Conn, red *redis.Client) {
 func getBatteryLevel(c net.Conn, red *redis.Client) {
     fmt.Fprintf(c,"f\n")
     status, err := bufio.NewReader(c).ReadString('\n')
-    errHndlr(err)
+    errHandler(err)
 
     data := strings.TrimSpace(status);
     bufio.NewReader(c).ReadString('\n')
@@ -86,13 +131,13 @@ func getBatteryLevel(c net.Conn, red *redis.Client) {
     fmt.Printf("Battery Level  : %s\n",data);
 
     r := red.Cmd("set", "BATTERY_LEVEL", data,"ex","90")
-    errHndlr(r.Err)
+    errHandler(r.Err)
 }
 
 func getBatteryVoltage(c net.Conn, red *redis.Client) {
     fmt.Fprintf(c,"B\n")
     status, err := bufio.NewReader(c).ReadString('\n')
-    errHndlr(err)
+    errHandler(err)
 
     data := strings.TrimSpace(status);
     bufio.NewReader(c).ReadString('\n')
@@ -100,13 +145,13 @@ func getBatteryVoltage(c net.Conn, red *redis.Client) {
     fmt.Printf("Battery Voltage: %s\n",data);
 
     r := red.Cmd("set", "BATTERY_VOLTAGE", data,"ex","90")
-    errHndlr(r.Err)
+    errHandler(r.Err)
 }
 
 func getLineFrequency(c net.Conn, red *redis.Client)  {
     fmt.Fprintf(c,"F\n")
     status, err := bufio.NewReader(c).ReadString('\n')
-    errHndlr(err)
+    errHandler(err)
 
     data := strings.TrimSpace(status);
     bufio.NewReader(c).ReadString('\n')
@@ -116,20 +161,31 @@ func getLineFrequency(c net.Conn, red *redis.Client)  {
 
 func getLineVoltage(c net.Conn, red *redis.Client)  {
     fmt.Fprintf(c,"L\n")
+
+    status,fail := myRead(c,5) 
+    fmt.Println("Status ",fail)
+
+    if  fail == OK {
+        data := strings.TrimSpace(status);
+        fmt.Println("Data ",data)
+
+    /*
     status, err := bufio.NewReader(c).ReadString('\n')
-    errHndlr(err)
+    errHandler(err)
 
     data := strings.TrimSpace(status);
 
     bufio.NewReader(c).ReadString('\n')
+    */
 
-    red.Cmd("set", "LINE_VOLTAGE", data,"ex","90")
+       red.Cmd("set", "LINE_VOLTAGE", data,"ex","90")
+    }
 }
 
 func getOutputVoltage(c net.Conn, red *redis.Client) {
     fmt.Fprintf(c,"O\n")
     status, err := bufio.NewReader(c).ReadString('\n')
-    errHndlr(err)
+    errHandler(err)
 
     data := strings.TrimSpace(status);
     bufio.NewReader(c).ReadString('\n')
@@ -153,11 +209,11 @@ func getCauseOfTransfer(c net.Conn, red *redis.Client) string {
     fmt.Println("Cause");
     fmt.Fprintf(c,"G\n")
     status, err := bufio.NewReader(c).ReadString('\n')
-    errHndlr(err)
+    errHandler(err)
     data := strings.TrimSpace(status);
 
     r := red.Cmd("set", "COT", data, "ex","90")
-    errHndlr(r.Err)
+    errHandler(r.Err)
 
     switch status {
     }
