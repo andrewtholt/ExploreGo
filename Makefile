@@ -1,5 +1,5 @@
 
-BINS=simpleWeb web query socket_client query_xml hello
+BINS=simpleWeb web query socket_client query_xml hello goRoutines
 
 GO=go build
 
@@ -22,6 +22,9 @@ query_xml:	query_xml.go
 
 hello:	hello.go
 	$(GO) hello.go
+
+goRoutines:	goRoutines.go
+	$(GO) goRoutines.go
 
 clean:
 	rm -f $(BINS) *~

@@ -6,12 +6,9 @@ import (
     "os"
     "net"
     "time"
+    "flag"
     )
 
-var event chan byte
-var toUps chan string
-var fromUps chan byte
-var runFlag bool
 
 func errHandler(err error) {
     if err != nil {
@@ -20,71 +17,95 @@ func errHandler(err error) {
     }   
 }
 
-func boss(conn net.Conn, c chan byte ) {
-}
 
-func iFaceRead(conn net.Conn, d chan byte) {
-    run := true
+func chanOut( conn net.Conn, d chan string) {
+    var data string
+    i := 0
 
-    fmt.Println("iFaceRead")
+    fmt.Println("chanOut started")
 
-    buf := make([]byte, 16)
-    out := make([]byte, 8)
 
     for {
-    for i :=0;run; {
-        n,err := conn.Read( buf)
-        errHandler(err)
+        fmt.Println("chanOut ",i)
 
-        fmt.Println("Data length is ",n)
-
-        fmt.Println("Data        is ",buf)
-        fmt.Println("Index       is ",i)
-        out[i] = buf[0]
-        fmt.Println("Out         is ",out)
-        i++;
-
-        if buf[0] == 10 { run = false }
+        data = <- d
+        conn.Write ( []byte(data) )
+        i++
     }
-    fmt.Println("iFaceRead done")
-
-    d <- buf[0]
-    }
-
 }
 
-func iFaceWrite(conn net.Conn, d chan string) {
-    fmt.Println("iFaceWrite")
+func chanIn( conn net.Conn, d chan byte) {
+    buf := make([]byte, 8 )
 
-    var buf string
+    i := 0
+    idx := 0
 
-    buf = <- d
+    for {
+        n, err := conn.Read( buf )
+        errHandler(err)
 
-    fmt.Println("iFaceOut Data   is ",buf)
-    fmt.Println("iFaceOut length is ",len(buf))
-    conn.Write([]byte(buf))
-    
+        fmt.Printf("%d:chanIn: ", n )
+        fmt.Println( buf )
+
+        d <- byte(n)
+        for idx=0;idx<n;idx++ {
+            d <- buf[idx]
+        }
+        i++
+    }
+}
+
+func timer( c chan bool) {
+    time.Sleep( 5 * time.Second)
+    c <- true
 }
 
 func main() {
-    event   = make(chan byte,1)
-    toUps   = make(chan string,1)
-    fromUps = make(chan byte,1)
+    //
+    // Declare channels
+    //
+    runFlag := true
 
-    runFlag = true
+    toUps   := make(chan string,1)
+    fromUps := make(chan byte,8)
+    timeout := make(chan bool,1)
 
-    host := "192.168.0.143:4001"
+    addressPtr := flag.String("address", "192.168.0.143", "a string")
+    portPtr := flag.Int("port",4001,"an int")
+    verbosePtr := flag.Bool("verbose",false,"a boolean")
+
+    flag.Parse()
+
+    verbose := *verbosePtr
+    address := *addressPtr
+    port    := *portPtr
+
+    host := fmt.Sprintf("%s:%d",address,port);
     conn, err := net.Dial("tcp", host)
+    errHandler( err )
 
-    errHandler(err)
+    if verbose {
+        fmt.Println("Host    : ",host)
+    }
 
-    go iFaceWrite( conn, toUps )
-//    conn.Write([]byte("L\r"))
-    time.Sleep(1 * time.Second)
-    toUps <- "L\r"
+//    time.Sleep( 5 * time.Second)
 
-    go iFaceRead( conn, fromUps )
+    fmt.Println("Start go routines")
+    go timer(timeout)
+    go chanOut( conn, toUps )
+    go chanIn( conn, fromUps )
 
-    time.Sleep(1 * time.Second)
+    for runFlag {
+        
+        toUps <- "Test\n"
+
+        select {
+            case <- timeout:
+                fmt.Println("Timer expired")
+            case <- fromUps:
+                d := <- fromUps
+                fmt.Println( "data rx:", d )
+        }
+        time.Sleep( 5 * time.Second)
+    }
 }
-
