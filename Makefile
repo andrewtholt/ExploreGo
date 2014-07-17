@@ -24,4 +24,4 @@ hello:	hello.go
 	$(GO) hello.go
 
 clean:
-	rm -f $(BINS)
+	rm -f $(BINS) *~
