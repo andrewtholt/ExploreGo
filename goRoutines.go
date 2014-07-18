@@ -43,14 +43,57 @@ func inFromUps ( conn net.Conn, c chan byte) {
     
     localBuffer := make( []byte,1 )
     for {
-        n, err := conn.Read( localBuffer )
-        fmt.Println("inFromUps : ", n)
+        _, err := conn.Read( localBuffer )
+//        fmt.Println("inFromUps : ", n)
 
         if localBuffer[0] != 10 {
             errHandler( err )
             c <- localBuffer[0]
         }
     }
+}
+
+func getCauseOfTransfer(r *redis.Client, t chan string, f chan byte) string {
+    var c byte
+    buffer := make([]byte,8)
+    t <- "G\n"
+    c = <- f
+    buffer[0] = c
+
+    /*
+    for i:=0 ; i< 1 ; i++ {
+        c = <- f
+        fmt.Println( c )
+        buffer[i] = c
+    }
+    */
+
+//    data := strings.Trim(string(buffer),"\x00");
+    data := ""
+
+    switch c {
+        case 'R':
+            data = "ROC"
+        case 'H':
+            data = "HIGH"
+        case 'L':
+            data = "LOW"
+        case 'T':
+            data = "SPIKE"
+        case 'O':
+            data = "NONE"
+        case 'S':
+            data = "USER"
+        case 'N':
+            c = <- f
+            data = "NA"
+        default:
+            data = "ERROR"
+    }
+
+
+    r.Cmd("set","COT", data,"ex","90")
+    return data
 }
 
 func getLineFrequency(r *redis.Client, t chan string, f chan byte) string {
@@ -60,12 +103,60 @@ func getLineFrequency(r *redis.Client, t chan string, f chan byte) string {
 
     for i:=0 ; i< 5 ; i++ {
         c = <- f
-        fmt.Println( c )
+//        fmt.Println( c )
         buffer[i] = c
     }
 
     data := strings.Trim(string(buffer),"\x00");
     r.Cmd("set","LINE_HZ", data,"ex","90")
+    return data
+}
+
+func getBatteryVoltage(r *redis.Client, t chan string, f chan byte) string {
+    var c byte
+    buffer := make([]byte,8)
+    t <- "B\n"
+
+    for i:=0 ; i< 5 ; i++ {
+        c = <- f
+//        fmt.Println( c )
+        buffer[i] = c
+    }
+
+    data := strings.Trim(string(buffer),"\x00");
+    r.Cmd("set","BATTERY_VOLTAGE", data,"ex","90")
+    return data
+}
+
+func getBatteryLevel(r *redis.Client, t chan string, f chan byte) string {
+    var c byte
+    buffer := make([]byte,8)
+    t <- "f\n"
+
+    for i:=0 ; i< 5 ; i++ {
+        c = <- f
+//        fmt.Println( c )
+        buffer[i] = c
+    }
+
+    data := strings.Trim(string(buffer),"\x00");
+    r.Cmd("set","BATTERY_LEVEL", data,"ex","90")
+    return data
+}
+
+func getOutputVoltage(r *redis.Client, t chan string, f chan byte) string {
+    var c byte
+    buffer := make([]byte,8)
+    t <- "O\n"
+
+    for i:=0 ; i< 5 ; i++ {
+        c = <- f
+//        fmt.Println( c )
+        buffer[i] = c
+    }
+
+    data := strings.Trim(string(buffer),"\x00");
+    r.Cmd("set","OUTPUT_VOLTAGE", data,"ex","90")
     return data
 }
 
@@ -76,7 +167,7 @@ func getLineVoltage(r *redis.Client, t chan string, f chan byte) string {
 
     for i:=0 ; i< 5 ; i++ {
         c = <- f
-        fmt.Println( c )
+//        fmt.Println( c )
         buffer[i] = c
     }
 
@@ -144,7 +235,11 @@ func main() {
 
     for {
         fmt.Println( getLineVoltage(redisConn, toUps, fromUps))
+        fmt.Println( getOutputVoltage(redisConn, toUps, fromUps))
         fmt.Println( getLineFrequency(redisConn, toUps, fromUps))
+        fmt.Println( getBatteryLevel(redisConn, toUps, fromUps))
+        fmt.Println( getBatteryVoltage(redisConn, toUps, fromUps))
+        fmt.Println( getCauseOfTransfer(redisConn, toUps, fromUps))
 
         fmt.Println("END")
         time.Sleep( time.Duration(delay) * time.Second )
