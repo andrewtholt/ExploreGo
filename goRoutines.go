@@ -2,12 +2,15 @@
 package main
 
 import (
-    "fmt"
-    "os"
-    "net"
-    "time"
-    "flag"
-    )
+        "fmt"
+        "os"
+        "net"
+        "time"
+        "flag"
+        "reflect"
+        "github.com/fzzy/radix/redis"
+        "strings"
+       )
 
 
 func errHandler(err error) {
@@ -17,95 +20,101 @@ func errHandler(err error) {
     }   
 }
 
+func Out() {
+}
 
-func chanOut( conn net.Conn, d chan string) {
+func In() {
+}
+
+func outToUps ( conn net.Conn, c chan string) {
+
     var data string
-    i := 0
-
-    fmt.Println("chanOut started")
-
 
     for {
-        fmt.Println("chanOut ",i)
+        data = <-c
+        fmt.Println("outToUps:", data)
 
-        data = <- d
-        conn.Write ( []byte(data) )
-        i++
+        conn.Write( []byte(data ))
     }
+
 }
 
-func chanIn( conn net.Conn, d chan byte) {
-    buf := make([]byte, 8 )
-
-    i := 0
-    idx := 0
-
+func inFromUps ( conn net.Conn, c chan byte) {
+    
+    localBuffer := make( []byte,1 )
     for {
-        n, err := conn.Read( buf )
-        errHandler(err)
+        n, err := conn.Read( localBuffer )
+        fmt.Println("inFromUps : ", n)
 
-        fmt.Printf("%d:chanIn: ", n )
-        fmt.Println( buf )
-
-        d <- byte(n)
-        for idx=0;idx<n;idx++ {
-            d <- buf[idx]
+        if localBuffer[0] != 10 {
+            errHandler( err )
+            c <- localBuffer[0]
         }
-        i++
     }
 }
 
-func timer( c chan bool) {
-    time.Sleep( 5 * time.Second)
-    c <- true
+func getLineVoltage(r *redis.Client, t chan string, f chan byte) string {
+    var c byte
+    buffer := make([]byte,8)
+    t <- "L\n"
+
+    for i:=0 ; i< 5 ; i++ {
+        c = <- f
+        fmt.Println( c )
+        buffer[i] = c
+    }
+
+    data := strings.Trim(string(buffer),"\x00");
+    r.Cmd("set","LINE_VOLTAGE", data,"ex","90")
+    return data
 }
 
 func main() {
-    //
-    // Declare channels
-    //
-    runFlag := true
-
     toUps   := make(chan string,1)
-    fromUps := make(chan byte,8)
-    timeout := make(chan bool,1)
+    fromUps := make(chan byte,1)
+
+//    timeout := make(chan bool,1)
 
     addressPtr := flag.String("address", "192.168.0.143", "a string")
+    redisPtr := flag.String("redis", "127.0.0.1", "a string")
     portPtr := flag.Int("port",4001,"an int")
     verbosePtr := flag.Bool("verbose",false,"a boolean")
+    delayPtr   := flag.Int("delay",60,"an int")
 
     flag.Parse()
 
-    verbose := *verbosePtr
-    address := *addressPtr
-    port    := *portPtr
+    verbose      := *verbosePtr
+    address      := *addressPtr
+    port         := *portPtr
+    redisAddress := *redisPtr
+    delay        := *delayPtr
 
-    host := fmt.Sprintf("%s:%d",address,port);
+    host := fmt.Sprintf("%s:%d", address, port)
+    redisHost := fmt.Sprintf("%s:6379",redisAddress)
+
+    if verbose {
+        fmt.Println("Serial Server : ", host )
+        fmt.Println("Serial Port   : ", host )
+        fmt.Println("Redis  Server : ", redisHost )
+        fmt.Println("Delay         : ", delay, "Seconds" )
+    }
+
+    redisConn, err := redis.DialTimeout("tcp", redisHost, time.Duration(10)*time.Second)
+    errHandler( err )
+
+    fmt.Println( reflect.TypeOf(redisConn) )
+
     conn, err := net.Dial("tcp", host)
     errHandler( err )
 
-    if verbose {
-        fmt.Println("Host    : ",host)
-    }
+    go outToUps(conn, toUps )
+    go inFromUps(conn, fromUps )
 
-//    time.Sleep( 5 * time.Second)
+    for {
+        fmt.Println( getLineVoltage(redisConn, toUps, fromUps))
 
-    fmt.Println("Start go routines")
-    go timer(timeout)
-    go chanOut( conn, toUps )
-    go chanIn( conn, fromUps )
-
-    for runFlag {
-        
-        toUps <- "Test\n"
-
-        select {
-            case <- timeout:
-                fmt.Println("Timer expired")
-            case <- fromUps:
-                d := <- fromUps
-                fmt.Println( "data rx:", d )
-        }
-        time.Sleep( 5 * time.Second)
+        fmt.Println("END")
+        time.Sleep( time.Duration(delay) * time.Second )
     }
 }
+
