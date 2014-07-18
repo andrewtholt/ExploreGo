@@ -69,15 +69,26 @@ func getLineVoltage(r *redis.Client, t chan string, f chan byte) string {
     return data
 }
 
+func usage() {
+    fmt.Println("Usage: goRoutines -help|-verbose|-address <service address>|-port <port number>")
+    fmt.Println("\t-redis <redis server address>| -delay <n>\n")
+
+    fmt.Println("If run with no switches the default is as if you entered:")
+    fmt.Println("goRutines.go -address 192.168.0.143 -port 4001 -redis 127.0.0.1 -delay 60")
+
+}
+
+
 func main() {
     toUps   := make(chan string,1)
     fromUps := make(chan byte,1)
 
 //    timeout := make(chan bool,1)
 
+    helpPtr    := flag.Bool("help",false,"a boolean")
     addressPtr := flag.String("address", "192.168.0.143", "a string")
-    redisPtr := flag.String("redis", "127.0.0.1", "a string")
-    portPtr := flag.Int("port",4001,"an int")
+    redisPtr   := flag.String("redis", "127.0.0.1", "a string")
+    portPtr    := flag.Int("port",4001,"an int")
     verbosePtr := flag.Bool("verbose",false,"a boolean")
     delayPtr   := flag.Int("delay",60,"an int")
 
@@ -88,10 +99,15 @@ func main() {
     port         := *portPtr
     redisAddress := *redisPtr
     delay        := *delayPtr
+    help         := *helpPtr
 
     host := fmt.Sprintf("%s:%d", address, port)
     redisHost := fmt.Sprintf("%s:6379",redisAddress)
 
+    if help {
+        usage()
+        os.Exit(0)
+    }
     if verbose {
         fmt.Println("Serial Server : ", host )
         fmt.Println("Serial Port   : ", host )
