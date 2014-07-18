@@ -53,6 +53,22 @@ func inFromUps ( conn net.Conn, c chan byte) {
     }
 }
 
+func getLineFrequency(r *redis.Client, t chan string, f chan byte) string {
+    var c byte
+    buffer := make([]byte,8)
+    t <- "F\n"
+
+    for i:=0 ; i< 5 ; i++ {
+        c = <- f
+        fmt.Println( c )
+        buffer[i] = c
+    }
+
+    data := strings.Trim(string(buffer),"\x00");
+    r.Cmd("set","LINE_HZ", data,"ex","90")
+    return data
+}
+
 func getLineVoltage(r *redis.Client, t chan string, f chan byte) string {
     var c byte
     buffer := make([]byte,8)
@@ -128,6 +144,7 @@ func main() {
 
     for {
         fmt.Println( getLineVoltage(redisConn, toUps, fromUps))
+        fmt.Println( getLineFrequency(redisConn, toUps, fromUps))
 
         fmt.Println("END")
         time.Sleep( time.Duration(delay) * time.Second )
