@@ -2,21 +2,21 @@
 package main
 
 import (
-        "fmt"
-        "os"
-        "net"
-        "time"
-        "flag"
-        "reflect"
-        "github.com/fzzy/radix/redis"
-        "strings"
-       )
+    "fmt"
+    "os"
+    "net"
+    "time"
+    "flag"
+    //        "reflect"
+    "github.com/fzzy/radix/redis"
+    "strings"
+)
 
 
 func errHandler(err error) {
     if err != nil {
         fmt.Println("error:", err)
-            os.Exit(1)
+        os.Exit(1)
     }   
 }
 
@@ -32,7 +32,7 @@ func outToUps ( conn net.Conn, c chan string) {
 
     for {
         data = <-c
-        fmt.Println("outToUps:", data)
+        //        fmt.Println("outToUps:", data)
 
         conn.Write( []byte(data ))
     }
@@ -44,7 +44,7 @@ func inFromUps ( conn net.Conn, c chan byte) {
     localBuffer := make( []byte,1 )
     for {
         _, err := conn.Read( localBuffer )
-//        fmt.Println("inFromUps : ", n)
+        //        fmt.Println("inFromUps : ", n)
 
         if localBuffer[0] != 10 {
             errHandler( err )
@@ -60,15 +60,7 @@ func getCauseOfTransfer(r *redis.Client, t chan string, f chan byte) string {
     c = <- f
     buffer[0] = c
 
-    /*
-    for i:=0 ; i< 1 ; i++ {
-        c = <- f
-        fmt.Println( c )
-        buffer[i] = c
-    }
-    */
-
-//    data := strings.Trim(string(buffer),"\x00");
+    //    data := strings.Trim(string(buffer),"\x00");
     data := ""
 
     switch c {
@@ -103,7 +95,6 @@ func getLineFrequency(r *redis.Client, t chan string, f chan byte) string {
 
     for i:=0 ; i< 5 ; i++ {
         c = <- f
-//        fmt.Println( c )
         buffer[i] = c
     }
 
@@ -119,7 +110,6 @@ func getBatteryVoltage(r *redis.Client, t chan string, f chan byte) string {
 
     for i:=0 ; i< 5 ; i++ {
         c = <- f
-//        fmt.Println( c )
         buffer[i] = c
     }
 
@@ -135,7 +125,6 @@ func getBatteryLevel(r *redis.Client, t chan string, f chan byte) string {
 
     for i:=0 ; i< 5 ; i++ {
         c = <- f
-//        fmt.Println( c )
         buffer[i] = c
     }
 
@@ -151,7 +140,6 @@ func getOutputVoltage(r *redis.Client, t chan string, f chan byte) string {
 
     for i:=0 ; i< 5 ; i++ {
         c = <- f
-//        fmt.Println( c )
         buffer[i] = c
     }
 
@@ -167,7 +155,6 @@ func getLineVoltage(r *redis.Client, t chan string, f chan byte) string {
 
     for i:=0 ; i< 5 ; i++ {
         c = <- f
-//        fmt.Println( c )
         buffer[i] = c
     }
 
@@ -190,7 +177,7 @@ func main() {
     toUps   := make(chan string,1)
     fromUps := make(chan byte,1)
 
-//    timeout := make(chan bool,1)
+    //    timeout := make(chan bool,1)
 
     helpPtr    := flag.Bool("help",false,"a boolean")
     addressPtr := flag.String("address", "192.168.0.143", "a string")
@@ -216,8 +203,10 @@ func main() {
         os.Exit(0)
     }
     if verbose {
-        fmt.Println("Serial Server : ", host )
-        fmt.Println("Serial Port   : ", host )
+        fmt.Println("Serial Server : ", address )
+        fmt.Println("Serial Port   : ", port )
+        fmt.Println("Serial Host   : ", host )
+        fmt.Println("================ ")
         fmt.Println("Redis  Server : ", redisHost )
         fmt.Println("Delay         : ", delay, "Seconds" )
     }
@@ -225,7 +214,7 @@ func main() {
     redisConn, err := redis.DialTimeout("tcp", redisHost, time.Duration(10)*time.Second)
     errHandler( err )
 
-    fmt.Println( reflect.TypeOf(redisConn) )
+    //    fmt.Println( reflect.TypeOf(redisConn) )
 
     conn, err := net.Dial("tcp", host)
     errHandler( err )
@@ -233,16 +222,32 @@ func main() {
     go outToUps(conn, toUps )
     go inFromUps(conn, fromUps )
 
-    for {
-        fmt.Println( getLineVoltage(redisConn, toUps, fromUps))
-        fmt.Println( getOutputVoltage(redisConn, toUps, fromUps))
-        fmt.Println( getLineFrequency(redisConn, toUps, fromUps))
-        fmt.Println( getBatteryLevel(redisConn, toUps, fromUps))
-        fmt.Println( getBatteryVoltage(redisConn, toUps, fromUps))
-        fmt.Println( getCauseOfTransfer(redisConn, toUps, fromUps))
+    var lineVoltage string
+    var lineFrequency string
+    var outputVoltage string
+    var batteryLevel string
+    var batteryVoltage string
+    var causeOfTransfer string
 
-        fmt.Println("END")
-        time.Sleep( time.Duration(delay) * time.Second )
+    for {
+        lineVoltage = getLineVoltage(redisConn, toUps, fromUps)
+        lineFrequency = getLineFrequency(redisConn, toUps, fromUps)
+        outputVoltage =  getOutputVoltage(redisConn, toUps, fromUps)
+        batteryLevel = getBatteryLevel(redisConn, toUps, fromUps)
+        batteryVoltage = getBatteryVoltage(redisConn, toUps, fromUps)
+        causeOfTransfer = getCauseOfTransfer(redisConn, toUps, fromUps)
+
+        if verbose {
+            fmt.Println( "Line Voltage     :",lineVoltage,"Volts" )
+            fmt.Println( "Line Frequency   :",lineFrequency,"Hz" )
+            fmt.Println( "Output Voltage   :",outputVoltage,"Volts" )
+            fmt.Println( "Battery Level    :",batteryLevel,"%" )
+            fmt.Println( "Battery Voltage  :",batteryVoltage,"Volts" )
+            fmt.Println( "Cause Of Transfer:", causeOfTransfer)
+
+            fmt.Println("END")
+            time.Sleep( time.Duration(delay) * time.Second )
+        }
     }
 }
 
