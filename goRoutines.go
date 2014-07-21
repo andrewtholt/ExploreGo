@@ -32,8 +32,6 @@ func outToUps ( conn net.Conn, c chan string) {
 
     for {
         data = <-c
-        //        fmt.Println("outToUps:", data)
-
         conn.Write( []byte(data ))
     }
 
@@ -44,7 +42,6 @@ func inFromUps ( conn net.Conn, c chan byte) {
     localBuffer := make( []byte,1 )
     for {
         _, err := conn.Read( localBuffer )
-        //        fmt.Println("inFromUps : ", n)
 
         if localBuffer[0] != 10 {
             errHandler( err )
@@ -60,7 +57,6 @@ func getCauseOfTransfer(r *redis.Client, t chan string, f chan byte) string {
     c = <- f
     buffer[0] = c
 
-    //    data := strings.Trim(string(buffer),"\x00");
     data := ""
 
     switch c {
@@ -82,7 +78,6 @@ func getCauseOfTransfer(r *redis.Client, t chan string, f chan byte) string {
         default:
             data = "ERROR"
     }
-
 
     r.Cmd("set","COT", data,"ex","90")
     return data
@@ -177,8 +172,6 @@ func main() {
     toUps   := make(chan string,1)
     fromUps := make(chan byte,1)
 
-    //    timeout := make(chan bool,1)
-
     helpPtr    := flag.Bool("help",false,"a boolean")
     addressPtr := flag.String("address", "192.168.0.143", "a string")
     redisPtr   := flag.String("redis", "127.0.0.1", "a string")
@@ -213,8 +206,6 @@ func main() {
 
     redisConn, err := redis.DialTimeout("tcp", redisHost, time.Duration(10)*time.Second)
     errHandler( err )
-
-    //    fmt.Println( reflect.TypeOf(redisConn) )
 
     conn, err := net.Dial("tcp", host)
     errHandler( err )
