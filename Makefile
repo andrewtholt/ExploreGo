@@ -1,7 +1,8 @@
 
-BINS=simpleWeb web query socket_client query_xml hello goRoutines
+BINS=simpleWeb web query socket_client query_xml hello goRoutines libtest.so
 
 GO=go build
+CC=gcc -g
 
 all:	$(BINS)
 
@@ -23,8 +24,21 @@ query_xml:	query_xml.go
 hello:	hello.go
 	$(GO) hello.go
 
-goRoutines:	goRoutines.go
+goRoutines:	goRoutines.go libtest.so
 	$(GO) goRoutines.go
 
+test.o:	test.c test.h Makefile
+	$(CC) -fPIC -c test.c -o test.o
+
+libtest.so:	test.o
+	$(CC) -shared -Wl,-soname,libtest.so.1 -o libtest.so.1.0 test.o
+	ln -sf libtest.so.1.0 libtest.so.1
+	ln -sf libtest.so.1 libtest.so
+
+tester.o:	tester.c test.h
+	$(CC) -c tester.c -o tester.o
+
+tester:	tester.o test.h libtest.so
+	$(CC) tester.o -L. -ltest -o tester
 clean:
 	rm -f $(BINS) *~

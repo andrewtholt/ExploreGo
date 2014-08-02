@@ -1,4 +1,4 @@
 
 
-int increment(int );
-int decrement(int );
+int Increment(int );
+int Decrement(int );
