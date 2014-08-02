@@ -6,6 +6,11 @@ socket_client
 simpleWeb
 thing
 goRoutines
+tester
 
+*.so
+*.so.*
+*.o
 *~
 *.swp
+*.*swp
