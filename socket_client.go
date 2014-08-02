@@ -5,7 +5,7 @@ import (
         "net"
         "bufio"
         "strings"
-        "reflect"
+//        "reflect"
         "os"
         "github.com/fzzy/radix/redis"
         "time"
@@ -91,8 +91,6 @@ func main() {
         fmt.Println("33:Network Error")
         os.Exit(1)
     } 
-
-    fmt.Println( reflect.TypeOf(conn) )
 
     fmt.Println("Here ... ")
     getLineVoltage(conn,c);
@@ -180,7 +178,14 @@ func getLineVoltage(c net.Conn, red *redis.Client)  {
     bufio.NewReader(c).ReadString('\n')
     */
 
-       r := red.Cmd("set", "LINE_VOLTAGE", data,"ex","90")
+//       r := red.Cmd("set", "LINE_VOLTAGE", data,"ex","90")
+       r := red.Cmd("set", "LINE_VOLTAGE", data)
+       if r.Err != nil {
+        fmt.Println("Redis error.")
+        errHandler(r.Err)
+       }
+
+       r = red.Cmd("expire", "LINE_VOLTAGE", 90)
        if r.Err != nil {
         fmt.Println("Redis error.")
         errHandler(r.Err)
