@@ -1,5 +1,11 @@
-
 package main
+
+/*
+void increment() {
+}
+*/
+
+import "C"
 
 import (
     "fmt"
@@ -11,6 +17,7 @@ import (
 
 
 func errHandler(err error) {
+
     if err != nil {
         fmt.Println("error:", err)
             os.Exit(1)
@@ -67,7 +74,9 @@ func main() {
     //
     // Declare channels
     //
+//    C.increment();
     runFlag := true
+
 
     toUps   := make(chan string,1)
     fromUps := make(chan byte,8)
