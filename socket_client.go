@@ -94,6 +94,7 @@ func main() {
 
     fmt.Println( reflect.TypeOf(conn) )
 
+    fmt.Println("Here ... ")
     getLineVoltage(conn,c);
 //    getLineFrequency(conn,c);
 //    getOutputVoltage(conn,c);
@@ -102,6 +103,7 @@ func main() {
 //    getCauseOfTransfer(conn,c);
 //    getRunTime(conn,c);
 
+    fmt.Println("... and here.")
     fmt.Println(err)
 }
 
@@ -178,7 +180,11 @@ func getLineVoltage(c net.Conn, red *redis.Client)  {
     bufio.NewReader(c).ReadString('\n')
     */
 
-       red.Cmd("set", "LINE_VOLTAGE", data,"ex","90")
+       r := red.Cmd("set", "LINE_VOLTAGE", data,"ex","90")
+       if r.Err != nil {
+        fmt.Println("Redis error.")
+        errHandler(r.Err)
+       }
     }
 }
 
