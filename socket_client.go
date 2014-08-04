@@ -45,12 +45,22 @@ func myRead(c net.Conn, len int) (string, int) {
     out[i] = buf[0]
     i=i+1
 
-    for {
+    lfCount := 0
+
+    for i < limit {
         n,err = c.Read( buf )
         errHandler(err)
 
-        if buf[0] != 10 {
-            out[i] = buf[0]
+        if 10 == buf[0] {
+            lfCount++
+        }
+
+        if lfCount >= 2 {
+            out[i] = 0x00
+            break;
+        }
+
+        if 0 == lfCount {
             i=i+1
         }
 
@@ -61,6 +71,7 @@ func myRead(c net.Conn, len int) (string, int) {
         if err != nil || i > limit { break }
     }
 
+    fmt.Println("Broke")
     return string(out[:len]), fail
 }
 
