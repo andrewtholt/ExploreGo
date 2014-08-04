@@ -40,12 +40,10 @@ func myRead(c net.Conn, len int) (string, int) {
             return "",POWER_FAIL
         case '$':
             return "",POWER_RETURN
-            
     }
 
     out[i] = buf[0]
     i=i+1
-
 
     fmt.Println("Limit=",limit)
     for i < limit {
@@ -53,12 +51,13 @@ func myRead(c net.Conn, len int) (string, int) {
         errHandler(err)
 
         out[i]=buf[0]
+
         if 10 == buf[0] {
             lfCount++
         }
 
         if lfCount >= 2 {
-            out[i] = 0x00
+//            out[i] = 0x00
             break;
         }
 
@@ -75,7 +74,7 @@ func myRead(c net.Conn, len int) (string, int) {
     }
 
     fmt.Println("Broke")
-    return string(out[:len]), fail
+    return string(out[:len-1]), fail
 }
 
 func main() {
@@ -108,7 +107,7 @@ func main() {
 
     fmt.Println("Here ... ")
     getLineVoltage(conn,c);
-//    getLineFrequency(conn,c);
+    getLineFrequency(conn,c);
 //    getOutputVoltage(conn,c);
 //    getBatteryVoltage(conn,c);
 //    getBatteryLevel(conn,c);
@@ -166,33 +165,30 @@ func getLineFrequency(c net.Conn, red *redis.Client)  {
     fmt.Fprintf(c,"F\n")
     status, err := bufio.NewReader(c).ReadString('\n')
     errHandler(err)
+    status,fail := myRead(c,6) 
 
-    data := strings.TrimSpace(status);
-    bufio.NewReader(c).ReadString('\n')
+    if fail == OK {
+        data := strings.TrimSpace(status);
+        fmt.Println("Data ",data)
 
-    red.Cmd("set", "LINE_HZ", data ,"ex","90")
+        r := red.Cmd("set", "LINE_HZ", data ,"ex","90")
+        if r.Err != nil {
+            fmt.Println("Redis error.")
+            errHandler(r.Err)
+        }
+    }
 }
 
 func getLineVoltage(c net.Conn, red *redis.Client)  {
     fmt.Fprintf(c,"L\n")
 
-    status,fail := myRead(c,5) 
+    status,fail := myRead(c,6) 
     fmt.Println("Status ",fail)
 
     if  fail == OK {
         data := strings.TrimSpace(status);
         fmt.Println("Data ",data)
 
-    /*
-    status, err := bufio.NewReader(c).ReadString('\n')
-    errHandler(err)
-
-    data := strings.TrimSpace(status);
-
-    bufio.NewReader(c).ReadString('\n')
-    */
-
-//       r := red.Cmd("set", "LINE_VOLTAGE", data,"ex","90")
        r := red.Cmd("set", "LINE_VOLTAGE", data)
        if r.Err != nil {
         fmt.Println("Redis error.")
