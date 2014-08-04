@@ -57,18 +57,21 @@ func myRead(c net.Conn, len int) (string, int) {
         }
 
         if lfCount >= 2 {
-//            out[i] = 0x00
             break;
         }
 
         if 0 == lfCount {
-            i=i+1
+            if buf[0] >= 32 {
+                i=i+1
+            }
         }
 
         fmt.Println("Read ",n)
         fmt.Println("i=",i)
+        fmt.Println("lfCount =",lfCount)
         fmt.Println( buf )
         fmt.Println( out )
+        fmt.Println( "================================================" )
 
         if err != nil || i > limit { break }
     }
@@ -106,7 +109,7 @@ func main() {
     } 
 
     fmt.Println("Here ... ")
-    getLineVoltage(conn,c);
+//    getLineVoltage(conn,c);
     getLineFrequency(conn,c);
 //    getOutputVoltage(conn,c);
 //    getBatteryVoltage(conn,c);
@@ -162,20 +165,28 @@ func getBatteryVoltage(c net.Conn, red *redis.Client) {
 }
 
 func getLineFrequency(c net.Conn, red *redis.Client)  {
+    fmt.Println("getLineFrequency")
+
     fmt.Fprintf(c,"F\n")
     status, err := bufio.NewReader(c).ReadString('\n')
     errHandler(err)
-    status,fail := myRead(c,6) 
+    status,fail := myRead(c,5) 
 
+    fmt.Println("++++++++++++++++++++")
     if fail == OK {
         data := strings.TrimSpace(status);
         fmt.Println("Data ",data)
 
-        r := red.Cmd("set", "LINE_HZ", data ,"ex","90")
+        r := red.Cmd("set", "LINE_HZ", data )
         if r.Err != nil {
             fmt.Println("Redis error.")
             errHandler(r.Err)
         }
+        r = red.Cmd("expire", "LINE_HZ", 90)
+        if r.Err != nil {
+            fmt.Println("Redis error.")
+            errHandler(r.Err)
+       }
     }
 }
 
